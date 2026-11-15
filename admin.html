@@ -1,1 +1,280 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Administração | TESTE</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="admin.css"><link rel="stylesheet" href="pdfs.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js" defer></script><script src="admin-novo.js" defer></script></head><body><header class="topbar"><a class="marca" href="index.html"><span class="simbolo">∑</span><span>TESTE<small>TESTE · ADMIN</small></span></a><button id="sairAdmin" class="btn secondary">Sair</button></header><main class="page-wrap"><section id="loginAdmin" class="panel form-panel"><h1>Área administrativa</h1><p class="muted">Acesso restrito a e-mails previamente cadastrados como administradores no Supabase.</p><form id="formAdmin"><div class="field"><label>E-mail</label><input id="emailAdmin" type="email" required></div><div class="field"><label>Senha</label><input id="senhaAdmin" type="password" required></div><button class="btn" style="width:100%">Entrar</button></form><p id="msgLogin" class="feedback"></p></section><section id="painelAdmin" class="hidden"><div class="row-between"><div><span class="eyebrow">CONTROLE DA PLATAFORMA</span><h1>Painel administrativo</h1></div><button id="atualizar" class="btn secondary">Atualizar dados</button></div><div class="admin-grid"><div class="stat"><strong id="qCursos">0</strong>Cursos ativos</div><div class="stat"><strong id="qCompras">0</strong>Compras</div><div class="stat"><strong id="qAlunos">0</strong>Alunos com acesso</div></div><section class="panel" style="margin-top:22px"><h2>Cadastrar curso</h2><form id="formCurso"><div class="field"><label>Nome do curso</label><input id="cursoNome" required></div><div class="field"><label>Descrição</label><textarea id="cursoDescricao" rows="3"></textarea></div><div class="field"><label>Preço (R$)</label><input id="cursoPreco" type="number" min="1" step="0.01" required></div><button class="btn">Salvar curso</button></form><p id="msgCurso" class="feedback"></p></section><section class="panel" style="margin-top:22px"><h2>Cursos e aulas</h2><div id="listaAdminCursos">Carregando...</div></section><section class="panel" style="margin-top:22px"><h2>Biblioteca de PDFs gratuitos</h2><p class="muted">Materiais disponíveis para qualquer visitante.</p><form id="formPdfGratis" class="field"><label>Título do PDF</label><input id="pdfGratisTitulo" required><label>Descrição</label><textarea id="pdfGratisDescricao" rows="2"></textarea><label>Arquivo PDF</label><input id="pdfGratisArquivo" type="file" accept="application/pdf,.pdf" required><button class="btn">Publicar PDF gratuito</button></form><p id="msgPdfGratis" class="feedback"></p><div id="listaPdfsGratis">Carregando PDFs...</div></section><section class="panel" style="margin-top:22px"><h2>Compras recentes</h2><div id="listaCompras">Carregando...</div></section></section></main></body></html>
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <title>Administração | TESTE</title>
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="pdfs.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js" defer></script>
+  <script src="admin-novo.js" defer></script>
+</head>
+
+<body>
+
+  <header class="topbar">
+    <a class="marca" href="index.html">
+      <span class="simbolo">∑</span>
+      <span>
+        TESTE
+        <small>TESTE · ADMIN</small>
+      </span>
+    </a>
+
+    <button id="sairAdmin" class="btn secondary">
+      Sair
+    </button>
+  </header>
+
+  <main class="page-wrap">
+
+    <!-- LOGIN ADMINISTRATIVO -->
+    <section id="loginAdmin" class="panel form-panel">
+
+      <h1>Área administrativa</h1>
+
+      <p class="muted">
+        Acesso restrito a e-mails previamente cadastrados
+        como administradores no Supabase.
+      </p>
+
+      <form id="formAdmin">
+
+        <div class="field">
+          <label for="emailAdmin">E-mail</label>
+          <input id="emailAdmin" type="email" required>
+        </div>
+
+        <div class="field">
+          <label for="senhaAdmin">Senha</label>
+          <input id="senhaAdmin" type="password" required>
+        </div>
+
+        <button class="btn" style="width:100%">
+          Entrar
+        </button>
+
+      </form>
+
+      <p id="msgLogin" class="feedback"></p>
+
+    </section>
+
+
+    <!-- PAINEL ADMINISTRATIVO -->
+    <section id="painelAdmin" class="hidden">
+
+      <div class="row-between">
+        <div>
+          <span class="eyebrow">CONTROLE DA PLATAFORMA</span>
+          <h1>Painel administrativo</h1>
+        </div>
+
+        <button id="atualizar" class="btn secondary">
+          Atualizar dados
+        </button>
+      </div>
+
+
+      <!-- INDICADORES -->
+      <div class="admin-grid">
+
+        <div class="stat">
+          <strong id="qCursos">0</strong>
+          Cursos ativos
+        </div>
+
+        <div class="stat">
+          <strong id="qCompras">0</strong>
+          Compras
+        </div>
+
+        <div class="stat">
+          <strong id="qAlunos">0</strong>
+          Alunos com acesso
+        </div>
+
+      </div>
+
+
+      <!-- CADASTRAR CURSO -->
+      <section class="panel" style="margin-top:22px">
+
+        <h2>Cadastrar curso</h2>
+
+        <form id="formCurso">
+
+          <div class="field">
+            <label for="cursoNome">Nome do curso</label>
+            <input id="cursoNome" required>
+          </div>
+
+          <div class="field">
+            <label for="cursoDescricao">Descrição</label>
+            <textarea id="cursoDescricao" rows="3"></textarea>
+          </div>
+
+          <div class="field">
+            <label for="cursoPreco">Preço (R$)</label>
+            <input
+              id="cursoPreco"
+              type="number"
+              min="1"
+              step="0.01"
+              required
+            >
+          </div>
+
+          <button class="btn" type="submit">
+            Salvar curso
+          </button>
+
+        </form>
+
+        <p id="msgCurso" class="feedback"></p>
+
+      </section>
+
+
+      <!-- CURSOS E AULAS -->
+      <section class="panel" style="margin-top:22px">
+
+        <h2>Cursos e aulas</h2>
+
+        <div id="listaAdminCursos">
+          Carregando...
+        </div>
+
+      </section>
+
+
+      <!-- LIBERAÇÃO MANUAL DE ACESSOS -->
+      <section class="panel" style="margin-top:22px">
+
+        <h2>Liberação manual de aulas</h2>
+
+        <p class="muted">
+          Libere gratuitamente aulas específicas para os alunos
+          que você escolher, sem exigir pagamento.
+        </p>
+
+        <form id="formAcessoManual">
+
+          <div class="field">
+            <label for="alunoAcesso">Selecionar aluno</label>
+
+            <select id="alunoAcesso" required>
+              <option value="">Selecione um aluno</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="cursoAcesso">Selecionar curso</label>
+
+            <select id="cursoAcesso" required>
+              <option value="">Selecione um curso</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="aulaAcesso">Selecionar aula</label>
+
+            <select id="aulaAcesso" required>
+              <option value="">Selecione uma aula</option>
+            </select>
+          </div>
+
+          <button class="btn" type="submit">
+            Liberar acesso gratuito
+          </button>
+
+        </form>
+
+        <p id="msgAcessoManual" class="feedback"></p>
+
+        <h3 style="margin-top:24px">
+          Acessos liberados
+        </h3>
+
+        <div id="listaAcessosManuais">
+          Carregando acessos...
+        </div>
+
+      </section>
+
+
+      <!-- BIBLIOTECA DE PDFS GRATUITOS -->
+      <section class="panel" style="margin-top:22px">
+
+        <h2>Biblioteca de PDFs gratuitos</h2>
+
+        <p class="muted">
+          Materiais disponíveis para qualquer visitante.
+        </p>
+
+        <form id="formPdfGratis" class="field">
+
+          <label for="pdfGratisTitulo">
+            Título do PDF
+          </label>
+
+          <input id="pdfGratisTitulo" required>
+
+          <label for="pdfGratisDescricao">
+            Descrição
+          </label>
+
+          <textarea
+            id="pdfGratisDescricao"
+            rows="2"
+          ></textarea>
+
+          <label for="pdfGratisArquivo">
+            Arquivo PDF
+          </label>
+
+          <input
+            id="pdfGratisArquivo"
+            type="file"
+            accept="application/pdf,.pdf"
+            required
+          >
+
+          <button class="btn" type="submit">
+            Publicar PDF gratuito
+          </button>
+
+        </form>
+
+        <p id="msgPdfGratis" class="feedback"></p>
+
+        <div id="listaPdfsGratis">
+          Carregando PDFs...
+        </div>
+
+      </section>
+
+
+      <!-- COMPRAS -->
+      <section class="panel" style="margin-top:22px">
+
+        <h2>Compras recentes</h2>
+
+        <div id="listaCompras">
+          Carregando...
+        </div>
+
+      </section>
+
+    </section>
+
+  </main>
+
+</body>
+</html>
