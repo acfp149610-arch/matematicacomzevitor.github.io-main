@@ -261,6 +261,50 @@
       </section>
 
 
+<section class="panel" style="margin-top:22px">
+  <h2>Liberação gratuita de aulas</h2>
+
+  <p class="muted">
+    Escolha o aluno e a aula que deseja liberar gratuitamente.
+  </p>
+
+  <form id="formAcessoManual">
+
+    <div class="field">
+      <label for="alunoAcesso">Aluno</label>
+      <select id="alunoAcesso" required>
+        <option value="">Carregando alunos...</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="cursoAcesso">Curso</label>
+      <select id="cursoAcesso" required>
+        <option value="">Selecione um curso</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="aulaAcesso">Aula</label>
+      <select id="aulaAcesso" required>
+        <option value="">Selecione uma aula</option>
+      </select>
+    </div>
+
+    <button class="btn" type="submit">
+      Liberar acesso gratuito
+    </button>
+  </form>
+
+  <p id="msgAcessoManual" class="feedback"></p>
+
+  <h3 style="margin-top:24px">Acessos concedidos</h3>
+
+  <div id="listaAcessosManuais">
+    Carregando...
+  </div>
+</section>
+
       <!-- COMPRAS -->
       <section class="panel" style="margin-top:22px">
 
