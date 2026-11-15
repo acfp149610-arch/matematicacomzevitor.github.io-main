@@ -62,7 +62,7 @@ async function verifyAdmin() {
 
   await loadDashboard();
 }
-
+await iniciarLiberacoes();
 // CADASTRAR CURSO
 async function saveCourse(e) {
   e.preventDefault();
