@@ -1,45 +1,146 @@
 
+
 let sb;
 
 const $ = id => document.getElementById(id);
 
-document.addEventListener('DOMContentLoaded', async () => {
-  sb = window.supabase.createClient(
-    APP_CONFIG.SUPABASE_URL,
-    APP_CONFIG.SUPABASE_ANON_KEY
-  );
+document.addEventListener("DOMContentLoaded", async () => {
+  const mensagem = $("msgLogin");
 
-  $('formAdmin').onsubmit = login;
+  try {
+    if (!window.supabase) {
+      throw new Error("Biblioteca do Supabase não carregada.");
+    }
 
-  $('sairAdmin').onclick = async () => {
-    await sb.auth.signOut();
-    location.reload();
-  };
+    if (!window.APP_CONFIG &&
+        typeof APP_CONFIG === "undefined") {
+      throw new Error("Arquivo config.js não carregou.");
+    }
 
-  $('formCurso').onsubmit = saveCourse;
-  $('formPdfGratis').onsubmit = uploadFreePdf;
-  $('atualizar').onclick = loadDashboard;
+    if (!APP_CONFIG.SUPABASE_URL ||
+        !APP_CONFIG.SUPABASE_ANON_KEY) {
+      throw new Error("Configuração do Supabase incompleta.");
+    }
 
-  const { data: { session } } = await sb.auth.getSession();
+    sb = window.supabase.createClient(
+      APP_CONFIG.SUPABASE_URL,
+      APP_CONFIG.SUPABASE_ANON_KEY
+    );
 
-  if (session) await verifyAdmin();
+    $("formAdmin").addEventListener("submit", login);
+
+    $("sairAdmin").addEventListener("click", async () => {
+      await sb.auth.signOut();
+      location.reload();
+    });
+
+    $("formCurso").onsubmit = saveCourse;
+    $("formPdfGratis").onsubmit = uploadFreePdf;
+    $("atualizar").onclick = loadDashboard;
+
+    const { data, error } = await sb.auth.getSession();
+
+    if (error) throw error;
+
+    if (data.session) {
+      await verifyAdmin();
+    }
+
+  } catch (error) {
+    if (mensagem) {
+      mensagem.textContent = "Erro ao iniciar o painel: " + error.message;
+    }
+    console.error("Erro de inicialização:", error);
+  }
 });
 
 async function login(e) {
   e.preventDefault();
-  $('msgLogin').textContent = 'Verificando...';
 
-  const { error } = await sb.auth.signInWithPassword({
-    email: $('emailAdmin').value.trim(),
-    password: $('senhaAdmin').value
-  });
+  const form = $("formAdmin");
+  const botao = form.querySelector('button[type="submit"]');
+  const mensagem = $("msgLogin");
 
-  if (error) {
-    $('msgLogin').textContent = error.message;
-    return;
+  botao.disabled = true;
+  mensagem.textContent = "Verificando acesso...";
+
+  try {
+    const email = $("emailAdmin").value.trim();
+    const password = $("senhaAdmin").value;
+
+    const { data, error } = await sb.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) throw error;
+
+    if (!data.user) {
+      throw new Error("Não foi possível identificar sua conta.");
+    }
+
+    await verifyAdmin();
+
+  } catch (error) {
+    mensagem.textContent = "Não foi possível entrar: " + error.message;
+    console.error("Erro no login:", error);
+  } finally {
+    botao.disabled = false;
   }
+}
 
-  await verifyAdmin();
+async function verifyAdmin() {
+  const mensagem = $("msgLogin");
+
+  try {
+    const { data: { user }, error: userError } =
+      await sb.auth.getUser();
+
+    if (userError) throw userError;
+
+    if (!user) {
+      throw new Error("Nenhum usuário autenticado.");
+    }
+
+    const { data, error } = await sb
+      .from("admins")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data) {
+      await sb.auth.signOut();
+      throw new Error("Esta conta não está cadastrada como administradora.");
+    }
+
+    $("loginAdmin").classList.add("hidden");
+    $("painelAdmin").classList.remove("hidden");
+
+    mensagem.textContent = "";
+
+    await loadDashboard();
+
+    // A liberação manual não deve impedir a abertura do painel.
+    try {
+      await iniciarLiberacoes();
+    } catch (error) {
+      console.error("Erro nas liberações:", error);
+      if ($("msgAcessoManual")) {
+        $("msgAcessoManual").textContent =
+          "Erro ao carregar liberações: " + error.message;
+      }
+    }
+
+  } catch (error) {
+    $("loginAdmin").classList.remove("hidden");
+    $("painelAdmin").classList.add("hidden");
+
+    if (mensagem) mensagem.textContent = error.message;
+
+    console.error("Erro ao verificar administrador:", error);
+  }
 }
 
 async function verifyAdmin() {
