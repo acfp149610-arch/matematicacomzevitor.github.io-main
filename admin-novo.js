@@ -870,15 +870,30 @@ function renderAdminPdf(pdf, container, type) {
 
 
 async function chamarGestaoAcessos(body) {
-  const { data, error } = await sb.functions.invoke(
-    "gestao-cursos",
-    { body }
-  );
+  try {
+    const { data, error } = await sb.functions.invoke(
+      "gestao-acessos",
+      { body }
+    );
 
-  if (error) throw error;
-  if (data?.error) throw new Error(data.error);
+    if (error) {
+      console.error("Erro na Edge Function:", error);
 
-  return data;
+      throw new Error(
+        error.message || "Não foi possível conectar à função gestao-acessos."
+      );
+    }
+
+    if (data?.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+
+  } catch (error) {
+    console.error("Falha ao chamar gestao-acessos:", error);
+    throw error;
+  }
 }
 
 async function iniciarLiberacoes() {
