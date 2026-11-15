@@ -871,7 +871,7 @@ function renderAdminPdf(pdf, container, type) {
 
 async function chamarGestaoAcessos(body) {
   const { data, error } = await sb.functions.invoke(
-    "gestao-acessos",
+    "gestao-cursos",
     { body }
   );
 
