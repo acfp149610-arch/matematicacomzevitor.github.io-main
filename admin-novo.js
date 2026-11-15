@@ -637,6 +637,7 @@ function renderAdminPdf(pdf, container, type) {
   container.append(box);
 }
 
+
 async function chamarGestaoAcessos(body) {
   const { data, error } = await sb.functions.invoke(
     "gestao-acessos",
@@ -650,8 +651,8 @@ async function chamarGestaoAcessos(body) {
 }
 
 async function iniciarLiberacoes() {
-  const aluno = $("alunoLiberacao");
-  const curso = $("cursoLiberacao");
+  const aluno = $("alunoAcesso");
+  const curso = $("cursoAcesso");
 
   if (!aluno || !curso) return;
 
@@ -661,7 +662,7 @@ async function iniciarLiberacoes() {
       chamarGestaoAcessos({ action: "courses" })
     ]);
 
-    aluno.innerHTML = '<option value="">Selecione o aluno</option>';
+    aluno.innerHTML = '<option value="">Selecione um aluno</option>';
 
     users.users.forEach(u => {
       const option = document.createElement("option");
@@ -670,7 +671,7 @@ async function iniciarLiberacoes() {
       aluno.append(option);
     });
 
-    curso.innerHTML = '<option value="">Selecione o curso</option>';
+    curso.innerHTML = '<option value="">Selecione um curso</option>';
 
     courses.courses.forEach(c => {
       const option = document.createElement("option");
@@ -679,12 +680,162 @@ async function iniciarLiberacoes() {
       curso.append(option);
     });
 
-    await carregarLiberacoes();
+    curso.onchange = carregarAulasLiberacao;
 
-  } catch (e) {
-    $("msgLiberacao").textContent = e.message;
+    $("formAcessoManual").onsubmit = liberarAcessoManual;
+
+    await carregarAcessosManuais();
+
+  } catch (error) {
+    $("msgAcessoManual").textContent =
+      "Erro ao carregar dados: " + error.message;
   }
 }
+
+async function carregarAulasLiberacao() {
+  const aula = $("aulaAcesso");
+
+  aula.innerHTML = '<option value="">Carregando aulas...</option>';
+
+  try {
+    const result = await chamarGestaoAcessos({
+      action: "lessons",
+      course_id: $("cursoAcesso").value
+    });
+
+    aula.innerHTML = '<option value="">Selecione uma aula</option>';
+
+    result.lessons.forEach(l => {
+      const option = document.createElement("option");
+      option.value = l.id;
+      option.textContent = l.title;
+      aula.append(option);
+    });
+
+    if (!result.lessons.length) {
+      aula.innerHTML = '<option value="">Nenhuma aula ativa</option>';
+    }
+
+  } catch (error) {
+    aula.innerHTML = '<option value="">Erro ao carregar aulas</option>';
+    $("msgAcessoManual").textContent = error.message;
+  }
+}
+
+async function liberarAcessoManual(e) {
+  e.preventDefault();
+
+  const user_id = $("alunoAcesso").value;
+  const lesson_id = $("aulaAcesso").value;
+
+  if (!user_id || !$("cursoAcesso").value || !lesson_id) {
+    $("msgAcessoManual").textContent =
+      "Selecione o aluno, o curso e a aula.";
+    return;
+  }
+
+  const button = e.target.querySelector("button");
+  button.disabled = true;
+
+  $("msgAcessoManual").textContent = "Liberando acesso...";
+
+  try {
+    await chamarGestaoAcessos({
+      action: "grant",
+      user_id,
+      lesson_id
+    });
+
+    $("msgAcessoManual").textContent =
+      "Acesso gratuito liberado com sucesso!";
+
+    e.target.reset();
+
+    $("aulaAcesso").innerHTML =
+      '<option value="">Selecione uma aula</option>';
+
+    await carregarAcessosManuais();
+
+  } catch (error) {
+    $("msgAcessoManual").textContent =
+      "Erro: " + error.message;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function carregarAcessosManuais() {
+  const box = $("listaAcessosManuais");
+
+  try {
+    const result = await chamarGestaoAcessos({
+      action: "list"
+    });
+
+    box.innerHTML = "";
+
+    if (!result.grants.length) {
+      box.textContent = "Nenhum acesso gratuito liberado.";
+      return;
+    }
+
+    result.grants.forEach(g => {
+      const item = document.createElement("article");
+      item.className = "course-row";
+
+      const title = document.createElement("strong");
+      title.textContent = g.email;
+
+      const lesson = g.lessons;
+      const course = lesson?.courses;
+
+      const detail = document.createElement("p");
+      detail.textContent =
+        `${course?.title || "Curso"} · ${lesson?.title || "Aula"}`;
+
+      const status = document.createElement("p");
+      status.textContent = g.active
+        ? "Acesso ativo"
+        : "Acesso revogado";
+
+      item.append(title, detail, status);
+
+      if (g.active) {
+        const revoke = document.createElement("button");
+        revoke.type = "button";
+        revoke.className = "btn secondary";
+        revoke.textContent = "Revogar acesso";
+
+        revoke.onclick = async () => {
+          if (!confirm("Deseja revogar este acesso?")) return;
+
+          revoke.disabled = true;
+
+          try {
+            await chamarGestaoAcessos({
+              action: "revoke",
+              id: g.id
+            });
+
+            await carregarAcessosManuais();
+
+          } catch (error) {
+            alert("Erro: " + error.message);
+            revoke.disabled = false;
+          }
+        };
+
+        item.append(revoke);
+      }
+
+      box.append(item);
+    });
+
+  } catch (error) {
+    box.textContent = "Erro ao carregar acessos: " + error.message;
+  }
+}
+
 
 $("tipoLiberacao")?.addEventListener("change", () => {
   const individual = $("tipoLiberacao").value === "lesson";
