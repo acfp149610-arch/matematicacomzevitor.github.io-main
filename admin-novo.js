@@ -636,3 +636,201 @@ function renderAdminPdf(pdf, container, type) {
   box.append(status, title, description, file, save, toggle, remove);
   container.append(box);
 }
+
+async function chamarGestaoAcessos(body) {
+  const { data, error } = await sb.functions.invoke(
+    "gestao-acessos",
+    { body }
+  );
+
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+
+  return data;
+}
+
+async function iniciarLiberacoes() {
+  const aluno = $("alunoLiberacao");
+  const curso = $("cursoLiberacao");
+
+  if (!aluno || !curso) return;
+
+  try {
+    const [users, courses] = await Promise.all([
+      chamarGestaoAcessos({ action: "users" }),
+      chamarGestaoAcessos({ action: "courses" })
+    ]);
+
+    aluno.innerHTML = '<option value="">Selecione o aluno</option>';
+
+    users.users.forEach(u => {
+      const option = document.createElement("option");
+      option.value = u.id;
+      option.textContent = u.email;
+      aluno.append(option);
+    });
+
+    curso.innerHTML = '<option value="">Selecione o curso</option>';
+
+    courses.courses.forEach(c => {
+      const option = document.createElement("option");
+      option.value = c.id;
+      option.textContent = c.title;
+      curso.append(option);
+    });
+
+    await carregarLiberacoes();
+
+  } catch (e) {
+    $("msgLiberacao").textContent = e.message;
+  }
+}
+
+$("tipoLiberacao")?.addEventListener("change", () => {
+  const individual = $("tipoLiberacao").value === "lesson";
+
+  $("campoAulaLiberacao").classList.toggle(
+    "hidden",
+    !individual
+  );
+});
+
+$("cursoLiberacao")?.addEventListener("change", async () => {
+  const aula = $("aulaLiberacao");
+  aula.innerHTML = '<option value="">Selecione uma aula</option>';
+
+  if ($("tipoLiberacao").value !== "lesson") return;
+
+  try {
+    const result = await chamarGestaoAcessos({
+      action: "lessons",
+      course_id: $("cursoLiberacao").value
+    });
+
+    result.lessons.forEach(l => {
+      const option = document.createElement("option");
+      option.value = l.id;
+      option.textContent = l.title;
+      aula.append(option);
+    });
+  } catch (e) {
+    $("msgLiberacao").textContent = e.message;
+  }
+});
+
+$("formLiberacao")?.addEventListener("submit", async e => {
+  e.preventDefault();
+
+  const scope = $("tipoLiberacao").value;
+  const user_id = $("alunoLiberacao").value;
+  const content_id = scope === "course"
+    ? $("cursoLiberacao").value
+    : $("aulaLiberacao").value;
+
+  if (!user_id || !content_id) {
+    $("msgLiberacao").textContent =
+      "Preencha todos os campos.";
+    return;
+  }
+
+  const button = e.target.querySelector("button");
+  button.disabled = true;
+  $("msgLiberacao").textContent = "Liberando acesso...";
+
+  try {
+    await chamarGestaoAcessos({
+      action: "grant",
+      user_id,
+      scope,
+      content_id
+    });
+
+    $("msgLiberacao").textContent =
+      "Acesso gratuito liberado com sucesso!";
+
+    await carregarLiberacoes();
+
+  } catch (err) {
+    $("msgLiberacao").textContent =
+      "Erro: " + err.message;
+  } finally {
+    button.disabled = false;
+  }
+});
+
+async function carregarLiberacoes() {
+  const box = $("listaLiberacoes");
+  if (!box) return;
+
+  try {
+    const [result, users, courses] = await Promise.all([
+      chamarGestaoAcessos({ action: "list" }),
+      chamarGestaoAcessos({ action: "users" }),
+      chamarGestaoAcessos({ action: "courses" })
+    ]);
+
+    const nomes = Object.fromEntries(
+      users.users.map(u => [u.id, u.email])
+    );
+
+    const cursos = Object.fromEntries(
+      courses.courses.map(c => [c.id, c.title])
+    );
+
+    box.innerHTML = "";
+
+    if (!result.grants.length) {
+      box.textContent = "Nenhuma liberação realizada.";
+      return;
+    }
+
+    result.grants.forEach(g => {
+      const item = document.createElement("article");
+      item.className = "course-row";
+
+      const title = document.createElement("strong");
+      title.textContent = nomes[g.user_id] || "Aluno";
+
+      const detail = document.createElement("p");
+      detail.textContent = g.course_id
+        ? "Curso: " + (cursos[g.course_id] || "Curso")
+        : "Aula individual: " + g.lesson_id;
+
+      const status = document.createElement("p");
+      status.textContent = g.active
+        ? "Acesso ativo"
+        : "Acesso revogado";
+
+      item.append(title, detail, status);
+
+      if (g.active) {
+        const revoke = document.createElement("button");
+        revoke.type = "button";
+        revoke.className = "btn secondary";
+        revoke.textContent = "Revogar acesso";
+
+        revoke.onclick = async () => {
+          if (!confirm("Revogar esta liberação?")) return;
+
+          try {
+            await chamarGestaoAcessos({
+              action: "revoke",
+              id: g.id
+            });
+
+            await carregarLiberacoes();
+          } catch (e) {
+            alert(e.message);
+          }
+        };
+
+        item.append(revoke);
+      }
+
+      box.append(item);
+    });
+
+  } catch (e) {
+    box.textContent = "Erro: " + e.message;
+  }
+}
