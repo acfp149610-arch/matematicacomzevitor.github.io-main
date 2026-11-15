@@ -375,8 +375,8 @@ async function renderCourse(course) {
       return;
     }
 
-    if (file.size > 500 * 1024 * 1024) {
-      alert('O vídeo deve ter até 500 MB.');
+    if (file.size > 2 * 1024 * 1024 * 1024) {
+      alert('O vídeo deve ter até 2 GB.');
       return;
     }
 
