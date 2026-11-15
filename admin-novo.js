@@ -61,8 +61,9 @@ async function verifyAdmin() {
   $('painelAdmin').classList.remove('hidden');
 
   await loadDashboard();
+  await iniciarLiberacoes();
 }
-await iniciarLiberacoes();
+
 // CADASTRAR CURSO
 async function saveCourse(e) {
   e.preventDefault();
