@@ -165,6 +165,55 @@
 
       </section>
 
+<!-- LIBERAÇÃO MANUAL DE AULAS -->
+<section class="panel" style="margin-top:22px">
+
+  <h2>Liberação manual de aulas</h2>
+
+  <p class="muted">
+    Libere gratuitamente aulas específicas para os alunos
+    que você escolher, sem exigir pagamento.
+  </p>
+
+  <form id="formAcessoManual">
+
+    <div class="field">
+      <label for="alunoAcesso">Selecionar aluno</label>
+      <select id="alunoAcesso" required>
+        <option value="">Selecione um aluno</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="cursoAcesso">Selecionar curso</label>
+      <select id="cursoAcesso" required>
+        <option value="">Selecione um curso</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="aulaAcesso">Selecionar aula</label>
+      <select id="aulaAcesso" required>
+        <option value="">Selecione uma aula</option>
+      </select>
+    </div>
+
+    <button class="btn" type="submit">
+      Liberar acesso gratuito
+    </button>
+
+  </form>
+
+  <p id="msgAcessoManual" class="feedback"></p>
+
+  <h3 style="margin-top:24px">Acessos liberados</h3>
+
+  <div id="listaAcessosManuais">
+    Carregando acessos...
+  </div>
+
+</section>
+
 
       <!-- LIBERAÇÃO MANUAL DE ACESSOS -->
       <section class="panel" style="margin-top:22px">
