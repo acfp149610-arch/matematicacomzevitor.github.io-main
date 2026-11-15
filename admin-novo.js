@@ -143,27 +143,6 @@ async function verifyAdmin() {
   }
 }
 
-async function verifyAdmin() {
-  const { data: { user } } = await sb.auth.getUser();
-
-  const { data, error } = await sb
-    .from('admins')
-    .select('user_id')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (error || !data) {
-    await sb.auth.signOut();
-    $('msgLogin').textContent = 'Conta sem autorização administrativa.';
-    return;
-  }
-
-  $('loginAdmin').classList.add('hidden');
-  $('painelAdmin').classList.remove('hidden');
-
-  await loadDashboard();
-  await iniciarLiberacoes();
-}
 
 // CADASTRAR CURSO
 async function saveCourse(e) {
@@ -246,6 +225,8 @@ async function loadDashboard() {
 }
 
 // EXIBIR E ADMINISTRAR CURSO
+
+// EXIBIR E ADMINISTRAR CURSO
 async function renderCourse(course) {
   const card = document.createElement('article');
   card.className = 'admin-card';
@@ -256,7 +237,7 @@ async function renderCourse(course) {
   const status = document.createElement('p');
   status.textContent = course.active ? 'Curso ativo' : 'Curso desativado';
 
-  // FORMULÁRIO DE EDIÇÃO DO CURSO
+  // EDITAR CURSO
   const editForm = document.createElement('form');
   editForm.className = 'field';
 
@@ -281,41 +262,38 @@ async function renderCourse(course) {
   save.className = 'btn';
   save.textContent = 'Salvar alterações do curso';
 
-  editForm.append(
-    title,
-    description,
-    price,
-    save
-  );
+  editForm.append(title, description, price, save);
 
   editForm.onsubmit = async e => {
     e.preventDefault();
     save.disabled = true;
 
-    const { error } = await sb
-      .from('courses')
-      .update({
-        title: title.value.trim(),
-        description: description.value.trim(),
-        price: Number(price.value)
-      })
-      .eq('id', course.id);
+    try {
+      const { error } = await sb
+        .from('courses')
+        .update({
+          title: title.value.trim(),
+          description: description.value.trim(),
+          price: Number(price.value)
+        })
+        .eq('id', course.id);
 
-    if (error) {
-      alert('Erro ao editar curso: ' + error.message);
-    } else {
+      if (error) throw error;
+
       alert('Curso atualizado!');
       await loadDashboard();
-    }
 
-    save.disabled = false;
+    } catch (error) {
+      alert('Erro ao editar curso: ' + error.message);
+    } finally {
+      save.disabled = false;
+    }
   };
 
   // ATIVAR OU DESATIVAR CURSO
   const toggle = document.createElement('button');
   toggle.type = 'button';
   toggle.className = 'btn secondary';
-
   toggle.textContent = course.active
     ? 'Desativar curso'
     : 'Ativar curso';
@@ -339,16 +317,131 @@ async function renderCourse(course) {
 
   const lessonsArea = document.createElement('div');
 
-  const { data: lessons, error } = await sb
+  // CADASTRAR NOVA AULA
+  const newLessonTitle = document.createElement('h4');
+  newLessonTitle.textContent = 'Adicionar nova aula';
+
+  const newLessonForm = document.createElement('form');
+  newLessonForm.className = 'field';
+
+  const newLessonName = document.createElement('input');
+  newLessonName.placeholder = 'Título da aula';
+  newLessonName.required = true;
+
+  const newLessonDescription = document.createElement('textarea');
+  newLessonDescription.placeholder = 'Descrição da aula';
+
+  const newLessonPosition = document.createElement('input');
+  newLessonPosition.type = 'number';
+  newLessonPosition.min = '1';
+  newLessonPosition.value = '1';
+  newLessonPosition.required = true;
+
+  const newLessonVideo = document.createElement('input');
+  newLessonVideo.type = 'file';
+  newLessonVideo.accept = 'video/mp4,video/webm,video/quicktime';
+  newLessonVideo.required = true;
+
+  const newLessonButton = document.createElement('button');
+  newLessonButton.type = 'submit';
+  newLessonButton.className = 'btn';
+  newLessonButton.textContent = 'Cadastrar aula e enviar vídeo';
+
+  newLessonForm.append(
+    newLessonName,
+    newLessonDescription,
+    newLessonPosition,
+    newLessonVideo,
+    newLessonButton
+  );
+
+  newLessonForm.onsubmit = async e => {
+    e.preventDefault();
+
+    const file = newLessonVideo.files[0];
+
+    if (!file) {
+      alert('Selecione um vídeo.');
+      return;
+    }
+
+    const extensaoValida = /\.(mp4|webm|mov)$/i.test(file.name);
+
+    if (
+      !['video/mp4', 'video/webm', 'video/quicktime'].includes(file.type)
+      && !extensaoValida
+    ) {
+      alert('Envie um vídeo MP4, WebM ou MOV.');
+      return;
+    }
+
+    if (file.size > 500 * 1024 * 1024) {
+      alert('O vídeo deve ter até 500 MB.');
+      return;
+    }
+
+    if (!newLessonName.value.trim()) {
+      alert('Informe o título da aula.');
+      return;
+    }
+
+    newLessonButton.disabled = true;
+    newLessonButton.textContent = 'Enviando vídeo...';
+
+    let path = null;
+
+    try {
+      path = `${course.id}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+
+      const { error: uploadError } = await sb.storage
+        .from('videos-cursos')
+        .upload(path, file, {
+          contentType: file.type || 'video/mp4',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { error: insertError } = await sb
+        .from('lessons')
+        .insert({
+          course_id: course.id,
+          title: newLessonName.value.trim(),
+          description: newLessonDescription.value.trim(),
+          position: Number(newLessonPosition.value),
+          video_path: path,
+          active: true
+        });
+
+      if (insertError) throw insertError;
+
+      alert('Aula cadastrada e vídeo enviado com sucesso!');
+      await loadDashboard();
+
+    } catch (error) {
+      if (path) {
+        await sb.storage.from('videos-cursos').remove([path]);
+      }
+
+      alert('Erro ao cadastrar aula: ' + error.message);
+
+    } finally {
+      newLessonButton.disabled = false;
+      newLessonButton.textContent = 'Cadastrar aula e enviar vídeo';
+    }
+  };
+
+  // CARREGAR AULAS EXISTENTES
+  const { data: lessons, error: lessonsError } = await sb
     .from('lessons')
     .select('*')
     .eq('course_id', course.id)
     .order('position', { ascending: true });
 
-  if (error) {
+  if (lessonsError) {
     lessonsArea.textContent =
-      'Erro ao carregar aulas: ' + error.message;
-  } else if (!lessons.length) {
+      'Erro ao carregar aulas: ' + lessonsError.message;
+  } else if (!lessons || lessons.length === 0) {
     lessonsArea.textContent = 'Nenhuma aula cadastrada.';
   } else {
     lessons.forEach(lesson => {
@@ -356,40 +449,61 @@ async function renderCourse(course) {
     });
   }
 
+  // PDFs DO CURSO
   const pdfTitle = document.createElement('h4');
   pdfTitle.textContent = 'Materiais em PDF deste curso';
 
   const pdfForm = document.createElement('form');
   pdfForm.className = 'field pdf-upload-form';
+
   const pdfName = document.createElement('input');
   pdfName.placeholder = 'Título do material';
   pdfName.required = true;
+
   const pdfDescription = document.createElement('textarea');
   pdfDescription.placeholder = 'Descrição do material (opcional)';
+
   const pdfFile = document.createElement('input');
   pdfFile.type = 'file';
   pdfFile.accept = 'application/pdf,.pdf';
   pdfFile.required = true;
+
   const pdfSubmit = document.createElement('button');
+  pdfSubmit.type = 'submit';
   pdfSubmit.className = 'btn';
   pdfSubmit.textContent = 'Enviar PDF para este curso';
+
   pdfForm.append(pdfName, pdfDescription, pdfFile, pdfSubmit);
+
   pdfForm.onsubmit = async e => {
     e.preventDefault();
+
     const file = pdfFile.files[0];
-    if (!file || file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+
+    if (!file || (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf')) {
       alert('Selecione um arquivo PDF.');
       return;
     }
+
     if (file.size > 50 * 1024 * 1024) {
       alert('O PDF deve ter até 50 MB.');
       return;
     }
+
     pdfSubmit.disabled = true;
+
     try {
       const path = `${course.id}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-      const { error: uploadError } = await sb.storage.from('pdf-cursos').upload(path, file, { contentType: 'application/pdf', upsert: false });
+
+      const { error: uploadError } = await sb.storage
+        .from('pdf-cursos')
+        .upload(path, file, {
+          contentType: 'application/pdf',
+          upsert: false
+        });
+
       if (uploadError) throw uploadError;
+
       const { error } = await sb.from('course_pdfs').insert({
         course_id: course.id,
         title: pdfName.value.trim(),
@@ -397,14 +511,18 @@ async function renderCourse(course) {
         file_path: path,
         active: true
       });
+
       if (error) {
         await sb.storage.from('pdf-cursos').remove([path]);
         throw error;
       }
+
       alert('PDF adicionado ao curso!');
       await loadDashboard();
-    } catch (err) {
-      alert('Erro ao enviar PDF: ' + err.message);
+
+    } catch (error) {
+      alert('Erro ao enviar PDF: ' + error.message);
+
     } finally {
       pdfSubmit.disabled = false;
     }
@@ -412,21 +530,32 @@ async function renderCourse(course) {
 
   const pdfList = document.createElement('div');
   pdfList.className = 'pdf-admin-list';
-  const { data: coursePdfs, error: pdfError } = await sb.from('course_pdfs').select('*').eq('course_id', course.id).order('created_at', { ascending: false });
+
+  const { data: coursePdfs, error: pdfError } = await sb
+    .from('course_pdfs')
+    .select('*')
+    .eq('course_id', course.id)
+    .order('created_at', { ascending: false });
+
   if (pdfError) {
     pdfList.textContent = 'Erro ao carregar PDFs: ' + pdfError.message;
   } else if (!coursePdfs?.length) {
     pdfList.textContent = 'Nenhum PDF cadastrado neste curso.';
   } else {
-    coursePdfs.forEach(pdf => renderAdminPdf(pdf, pdfList, 'course'));
+    coursePdfs.forEach(pdf => {
+      renderAdminPdf(pdf, pdfList, 'course');
+    });
   }
 
+  // MONTAR O CARTÃO DO CURSO
   card.append(
     heading,
     status,
     editForm,
     toggle,
     lessonsTitle,
+    newLessonTitle,
+    newLessonForm,
     lessonsArea,
     pdfTitle,
     pdfForm,
